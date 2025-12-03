@@ -1,13 +1,15 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+from fastapi_socketio import SocketManager
 
 app = FastAPI()
+sio = SocketManager(app=app)
 
 html = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebSocket Chat</title>
+    <title>Socket.IO Chat</title>
 </head>
 <body>
 <h1>Simple Chat</h1>
@@ -15,25 +17,17 @@ html = """
 <input id="msgInput" type="text">
 <button onclick="sendMessage()">Send</button>
 
+<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 <script>
-    // Використовуємо WSS для HTTPS та динамічний хост
-    var ws = new WebSocket(`wss://${window.location.host}/ws`);
+    var socket = io();
 
-    ws.onopen = function() {
-        console.log("WebSocket connected!");
-    }
-
-    ws.onmessage = function(event) {
-        document.getElementById("messages").value += event.data + "\\n";
-    };
-
-    ws.onerror = function(event) {
-        console.error("WebSocket error:", event);
-    };
+    socket.on('message', function(msg) {
+        document.getElementById("messages").value += msg + "\\n";
+    });
 
     function sendMessage() {
         let text = document.getElementById("msgInput").value;
-        ws.send(text);
+        socket.emit('message', text);
         document.getElementById("msgInput").value = "";
     }
 </script>
@@ -45,9 +39,6 @@ html = """
 def get():
     return HTMLResponse(html)
 
-@app.websocket("/ws")
-async def websocket_endpoint(ws: WebSocket):
-    await ws.accept()
-    while True:
-        data = await ws.receive_text()
-        await ws.send_text(f"Message: {data}")
+@sio.on('message')
+async def handle_message(sid, msg):
+    await sio.emit('message', f'Message: {msg}')
