@@ -1,4 +1,2 @@
-fastapi
-uvicorn
-fastapi-socketio
-python-socketio[asyncio]
+fastapi==0.100.0
+uvicorn[standard]==0.23.2

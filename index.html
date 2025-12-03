@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <title>WebSocket Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
+    #log { border:1px solid #ccc; padding:10px; height: 320px; overflow:auto; }
+    .msg { margin: 4px 0; }
+    .info { color: #666; font-style: italic; }
+    .me { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Chat (WebSocket)</h1>
+
+  <div>
+    Ім'я: <input id="username" value="User" />
+    Кімната: <input id="room" value="main" />
+    <button id="connectBtn">Підключитись</button>
+    <button id="disconnectBtn" disabled>Відключитись</button>
+  </div>
+
+  <div id="log"></div>
+
+  <div style="margin-top:10px;">
+    <input id="message" style="width:70%;" placeholder="Ваше повідомлення" />
+    <button id="sendBtn" disabled>Відправити</button>
+  </div>
+
+  <script>
+    let ws = null;
+    const logEl = document.getElementById('log');
+    const userInput = document.getElementById('username');
+    const roomInput = document.getElementById('room');
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const sendBtn = document.getElementById('sendBtn');
+    const msgInput = document.getElementById('message');
+
+    function append(node) {
+      logEl.appendChild(node);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function showMessage(obj) {
+      const div = document.createElement('div');
+      div.className = 'msg';
+      if (obj.type === 'message') {
+        div.innerHTML = `<span class="me">${obj.username}</span>: ${obj.text} <span style="color:#999;font-size:0.8em">[${obj.timestamp}]</span>`;
+      } else if (obj.type === 'info') {
+        div.className += ' info';
+        div.textContent = `[${obj.timestamp}] ${obj.text}`;
+      } else if (obj.type === 'error') {
+        div.style.color = 'red';
+        div.textContent = `Error: ${obj.text}`;
+      }
+      append(div);
+    }
+
+    connectBtn.onclick = () => {
+      if (ws) return;
+      const protocol = (location.protocol === 'https:') ? 'wss' : 'ws';
+      const url = `${protocol}://${location.host}/ws`;
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        const username = userInput.value || 'User';
+        const room = roomInput.value || 'main';
+        ws.send(JSON.stringify({type: 'join', room, username}));
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+        sendBtn.disabled = false;
+      };
+      ws.onmessage = (ev) => {
+        try {
+          const obj = JSON.parse(ev.data);
+          showMessage(obj);
+        } catch (e) {
+          console.error("Invalid message", ev.data);
+        }
+      };
+      ws.onclose = () => {
+        ws = null;
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+        sendBtn.disabled = true;
+      };
+      ws.onerror = (e) => {
+        console.error("WS error", e);
+      };
+    };
+
+    disconnectBtn.onclick = () => {
+      if (!ws) return;
+      ws.send(JSON.stringify({type: 'leave', room: roomInput.value || 'main'}));
+      ws.close();
+      ws = null;
+      connectBtn.disabled = false;
+      disconnectBtn.disabled = true;
+      sendBtn.disabled = true;
+    };
+
+    sendBtn.onclick = () => {
+      if (!ws) return;
+      const text = msgInput.value;
+      if (!text) return;
+      ws.send(JSON.stringify({
+        type: 'message',
+        room: roomInput.value || 'main',
+        username: userInput.value || 'User',
+        text
+      }));
+      msgInput.value = '';
+    };
+
+    msgInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendBtn.click();
+    });
+  </script>
+</body>
+</html>
