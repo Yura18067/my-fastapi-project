@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi_socketio import SocketManager
 
 app = FastAPI()
-sio = SocketManager(app=app)
+sio = SocketManager(app=app, mount_location="/ws")  # WebSocket маршрут /ws
 
 html = """
 <!DOCTYPE html>
@@ -19,7 +19,7 @@ html = """
 
 <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 <script>
-    var socket = io();
+    var socket = io("/ws");  // Підключаємося до Socket.IO на /ws
 
     socket.on('message', function(msg) {
         document.getElementById("messages").value += msg + "\\n";
@@ -27,8 +27,10 @@ html = """
 
     function sendMessage() {
         let text = document.getElementById("msgInput").value;
-        socket.emit('message', text);
-        document.getElementById("msgInput").value = "";
+        if(text.trim() !== "") {
+            socket.emit('message', text);
+            document.getElementById("msgInput").value = "";
+        }
     }
 </script>
 </body>
@@ -41,4 +43,5 @@ def get():
 
 @sio.on('message')
 async def handle_message(sid, msg):
-    await sio.emit('message', f'Message: {msg}')
+    # Відправляємо повідомлення всім підключеним клієнтам
+    await sio.emit('message', f'You: {msg}')
