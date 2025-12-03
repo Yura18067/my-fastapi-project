@@ -1,7 +1,17 @@
 from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 app = FastAPI()
+
+# Дозволяємо підключення з будь-якого хоста (Render)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    allow_credentials=True
+)
 
 html = """
 <!DOCTYPE html>
@@ -16,11 +26,18 @@ html = """
 <button onclick="sendMessage()">Send</button>
 
 <script>
-    // Використовуємо wss:// для Render (HTTPS) та динамічний хост
     var ws = new WebSocket(`wss://${window.location.host}/ws`);
+
+    ws.onopen = function() {
+        console.log("WebSocket connected!");
+    }
 
     ws.onmessage = function(event) {
         document.getElementById("messages").value += event.data + "\\n";
+    };
+
+    ws.onerror = function(event) {
+        console.error("WebSocket error:", event);
     };
 
     function sendMessage() {
