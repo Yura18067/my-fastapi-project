@@ -1,2 +1,4 @@
 fastapi
 uvicorn
+fastapi-socketio
+python-socketio[asyncio]
