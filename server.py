@@ -16,8 +16,8 @@ html = """
 <button onclick="sendMessage()">Send</button>
 
 <script>
-    // Використовуємо динамічний хост, щоб WebSocket працював і на Render
-    var ws = new WebSocket(`ws://${window.location.host}/ws`);
+    // Використовуємо wss:// для Render (HTTPS) та динамічний хост
+    var ws = new WebSocket(`wss://${window.location.host}/ws`);
 
     ws.onmessage = function(event) {
         document.getElementById("messages").value += event.data + "\\n";
